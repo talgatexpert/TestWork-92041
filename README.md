@@ -23,5 +23,8 @@ copy .env.example as .env
 
 `php artisan migrate --seed
 `
+
+Next step for the run development mode  
+
 `php artisan serve
 `
