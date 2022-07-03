@@ -166,7 +166,7 @@
 		<template v-slot:no-data>
 			<v-btn
 					color="primary"
-					@click="initialize"
+					@click="initialize(false)"
 			>
 				Reset
 			</v-btn>
@@ -174,9 +174,9 @@
 	</v-data-table>
 </template>
 <script>
-import request from "@/utils/request";
-import {logout} from "@/api/auth";
-import {removeToken} from "@/utils/auth";
+import request from '@/utils/request';
+import {logout} from '@/api/auth';
+import {removeToken} from '@/utils/auth';
 
 export default {
 	data: () => ({
@@ -184,8 +184,8 @@ export default {
 		dialogDelete: false,
 		loading: true,
 		headers: [
-			{text: 'Dessert ID', value: 'id',},
-			{text: 'Dessert Name', value: 'name',},
+			{text: 'Dessert ID', value: 'id'},
+			{text: 'Dessert Name', value: 'name'},
 			{text: 'Calories', value: 'calories'},
 			{text: 'Fat (g)', value: 'fat'},
 			{text: 'Carbs (g)', value: 'carbs'},
@@ -217,33 +217,31 @@ export default {
 			next_page_url: null,
 			prev_page_url: null,
 		},
-		errors: {}
+		errors: {},
 	}),
 
 	computed: {
 		formTitle() {
-			return this.editedIndex === -1 ? 'New Item' : 'Edit Item'
+			return this.editedIndex === -1 ? 'New Item' : 'Edit Item';
 		},
 	},
 
 	watch: {
 		dialog(val) {
-			val || this.close()
+			val || this.close();
 		},
 		dialogDelete(val) {
-			val || this.closeDelete()
+			val || this.closeDelete();
 		},
 	},
 
-
 	async mounted() {
-		await this.initialize();
+		await this.initialize(false);
 	},
 
 	async beforeRouteUpdate(to, from, next) {
 		await this.initialize(to);
 		next();
-
 	},
 
 	methods: {
@@ -251,121 +249,122 @@ export default {
 		async buildQuery(route = null) {
 			const query = route ? route.query : this.$route.query;
 			const page = query.page ?? 1;
-			const sortBy = query.sort ?? "ASC";
-			const orderBy = query.orderby ?? "id";
-			let perPage = query.limit ?? 10;
-			return '?limit=' + perPage + '&orderby=' + orderBy + '&page=' + page + '&sort=' + sortBy;
+			const sortBy = query.sort ?? 'ASC';
+			const orderBy = query.orderby ?? 'id';
+			const perPage = query.limit ?? 10;
+			return `?limit=${perPage}&orderby=${orderBy}&page=${page}&sort=${sortBy}`;
 		},
 		async initialize(route) {
-
 			const query = await this.buildQuery(route);
-			const response = await request('api/desserts' + query).catch(e => console.error(e)).finally(() => {
+			const response = await request(`api/desserts${query}`).catch((e) => console.error(e)).finally(() => {
 				this.loading = false;
-			})
+			});
 			if (response.success) {
-				await this.$store.dispatch('dessert/get', response)
+				await this.$store.dispatch('dessert/get', response);
 			}
-			this.desserts = await this.$store.getters['dessert/desserts']
-			this.paginationProps = await this.$store.getters['dessert/pagination']
-
+			this.desserts = await this.$store.getters['dessert/desserts'];
+			this.paginationProps = await this.$store.getters['dessert/pagination'];
 		},
 
 		async editItem(item) {
-			this.editedIndex = this.desserts.indexOf(item)
+			this.editedIndex = this.desserts.indexOf(item);
 			if (!item.id) {
-				let response = await request('api/desserts/' + item.id).catch(e => console.error(e))
-				this.editedItem = Object.assign({}, response.data);
+				const response = await request(`api/desserts/${item.id}`).catch((e) => console.error(e));
+				this.editedItem = {...response.data};
 			} else {
-				this.editedItem = Object.assign({}, item);
+				this.editedItem = {...item};
 			}
-			this.dialog = true
+			this.dialog = true;
 		},
 
 		deleteItem(item) {
-			this.editedIndex = this.desserts.indexOf(item)
-			this.editedItem = Object.assign({}, item)
-			this.dialogDelete = true
+			this.editedIndex = this.desserts.indexOf(item);
+			this.editedItem = {...item};
+			this.dialogDelete = true;
 		},
 
 		async deleteItemConfirm() {
 			this.clearError();
-			await request.delete('api/desserts/' + this.editedItem.id)
-					.then(result => {
+			await request.delete(`api/desserts/${this.editedItem.id}`)
+					.then((result) => {
 						if (result.success) {
-							this.desserts.splice(this.editedIndex, 1)
+							this.desserts.splice(this.editedIndex, 1);
 						}
 					})
-					.catch(e => console.error(e))
-			this.closeDelete()
+					.catch((e) => console.error(e));
+			this.closeDelete();
 		},
 
 		close() {
-			this.dialog = false
+			this.dialog = false;
 			this.$nextTick(() => {
-				this.editedItem = Object.assign({}, this.defaultItem)
-				this.editedIndex = -1
-			})
+				this.editedItem = {...this.defaultItem};
+				this.editedIndex = -1;
+			});
 		},
 
 		closeDelete() {
-			this.dialogDelete = false
+			this.dialogDelete = false;
 			this.$nextTick(() => {
-				this.editedItem = Object.assign({}, this.defaultItem)
-				this.editedIndex = -1
-			})
+				this.editedItem = {...this.defaultItem};
+				this.editedIndex = -1;
+			});
 		},
 
 		clearError() {
-			this.errors = {}
+			this.errors = {};
 		},
 		async save() {
 			this.clearError();
+
+			this.loading = true;
 			if (this.editedIndex > -1) {
-				await request.put('api/desserts/' + this.editedItem.id, this.editedItem)
-						.then(result => {
+				await request.put(`api/desserts/${this.editedItem.id}`, this.editedItem)
+						.then(async (result) => {
 							if (result.success) {
-								Object.assign(this.desserts[this.editedIndex], result.data)
-								this.close()
+								Object.assign(this.desserts[this.editedIndex], result.data);
+								await this.close();
 							}
 						})
-						.catch(({response: {data}}) => this.errors = data.errors)
+						.catch(({response: {data}}) => this.errors = data.errors);
 			} else {
 				await request.post('api/desserts/', this.editedItem)
-						.then(result => {
-
+						.then(async (result) => {
 							if (result.success) {
-								this.desserts.push(result.data)
-								this.close()
+								if (this.desserts.length == 0) {
+									await this.initialize(false);
+								} else {
+									this.desserts.push(result.data);
+              }
+								await this.close();
 							}
 						})
-						.catch(({response: {data}}) => this.errors = data.errors)
-
+						.catch(({response: {data}}) => this.errors = data.errors);
 			}
+			this.loading = false;
+
 		},
 
 		async paginate(val) {
-
 			// emitted by the data-table when changing page, rows per page, or the sorted column/direction - will be also immediately emitted after the component was created
-			const query = this.$route.query;
-			const obj = Object.assign({}, query);
+			const {query} = this.$route;
+			const obj = {...query};
 			obj.limit = val.itemsPerPage === -1 ? 'all' : val.itemsPerPage;
 			if (val.descending) obj.desc = 'true';
 			else delete obj.desc;
 			obj.orderby = val?.sortBy[0];
 
-
-			obj.page = val.page;
+			obj.page = val.page ?? 1;
 			if (val.sortDesc[0] === false) {
-				obj.sort = "ASC"
+				obj.sort = 'ASC';
 			} else {
-				obj.sort = "DESC"
+				obj.sort = 'DESC';
 			}
-
 
 			// check if old and new query are the same - VueRouter will not change the route if they are, so probably this is the first page loading
 
 			await this.$router.replace({...this.$router.currentRoute, query: obj}).catch((error) => {
-				console.log('Page Error')
+				console.log('Page Error');
 			});
 		},
 
@@ -373,7 +372,7 @@ export default {
 			await logout();
 			removeToken();
 			await this.$store.dispatch('auth/logout');
-		}
+		},
 	},
-}
+};
 </script>
